@@ -23,15 +23,84 @@ async function getExchangeRate() {
     return data.rate;
 }
 
-let depreciation = [];
-let extraDepreciation = 0;
+const directImportDepreciation = [
+    { maxMonths: 6, depreciation: 0.05 },
+    { maxMonths: 12, depreciation: 0.10 },
+    { maxMonths: 24, depreciation: 0.15 },
+    { maxMonths: 36, depreciation: 0.20 },
+    { maxMonths: 48, depreciation: 0.30 },
+    { maxMonths: 60, depreciation: 0.40 },
+    { maxMonths: 72, depreciation: 0.50 },
+    { maxMonths: 84, depreciation: 0.60 },
+    { maxMonths: 96, depreciation: 0.70 }
+];
 
-if()
+function calculateCRSP(custom, depreciation, exciseRate, extraDepreciation = 0) {
 
-function reverseCRSP(custom, year, cc, fuelType){
-    let crsp = custom / ((100%-depreciation)/(1.25*1.16*excise)*(100%-extraDepreciation)*1.25);
+    return custom / (
+        ((1 - depreciation) / (1.25 * 1.16 * exciseRate))
+        * (1 - extraDepreciation)
+        * 1.25
+    );
 
-    return crsp;
+}
+
+function method1(custom, depreciation, extraDepreciation = 0) {
+    return calculateCRSP(
+        custom,
+        depreciation,
+        1.20,
+        extraDepreciation
+    );
+}
+
+
+function method2(custom, depreciation, extraDepreciation = 0) {
+    return calculateCRSP(
+        custom,
+        depreciation,
+        1.25,
+        extraDepreciation
+    );
+}
+
+
+function method3(custom, depreciation, extraDepreciation = 0) {
+    return calculateCRSP(
+        custom,
+        depreciation,
+        1.30,
+        extraDepreciation
+    );
+}
+
+const vehicleMethods = {
+
+    smallEngine: {
+        excise: 1.20,
+        calculate: method1
+    },
+
+    largeEngine: {
+        excise: 1.25,
+        calculate: method2
+    },
+
+    highCapacity: {
+        excise: 1.30,
+        calculate: method3
+    }
+
+};
+
+let method;
+
+if (cc <= 1500) {
+    method = vehicleMethods.smallEngine;
+} else if (cc > 1500 && cc <= 3000 && fuelType === "petrol" || cc > 1500 && cc <= 2500 && fuelType === "diesel") {
+    method = vehicleMethods.largeEngine;
+} else {
+    method = vehicleMethods.highCapacity;
 }
 
 // Calculate Customs Value
