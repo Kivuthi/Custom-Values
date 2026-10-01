@@ -1,13 +1,12 @@
-function customValue(custom) {
-    let FOB = 0.8 * custom;
-    let FRT = 0.185 * custom;
-    let INS = 0.015 * custom;
+function calculateCustomValue(custom) {
+
+    const FOB = 0.8 * custom;
+    const FRT = 0.185 * custom;
+    const INS = 0.015 * custom;
 
     return { FOB, FRT, INS };
 }
 
-
-// Get current USD/KES exchange rate
 async function getExchangeRate() {
 
     const response = await fetch(
@@ -23,7 +22,124 @@ async function getExchangeRate() {
     return data.rate;
 }
 
+const calculateCvButton =
+    document.getElementById("calculateCv");
+
+if (calculateCvButton) {
+
+    calculateCvButton.addEventListener(
+        "click",
+        async function () {
+
+            const custom = Number(
+                document.getElementById("customValue").value
+            );
+
+            if (!custom || custom <= 0) {
+                alert("Please enter a valid customs value.");
+                return;
+            }
+
+            try {
+
+                const result =
+                    calculateCustomValue(custom);
+
+                const exchangeRate =
+                    await getExchangeRate();
+
+                const FOBUSD =
+                    result.FOB / exchangeRate;
+
+                const FRTUSD =
+                    result.FRT / exchangeRate;
+
+                const INSUSD =
+                    result.INS / exchangeRate;
+
+                const FOBValue =
+                    document.getElementById("FOBValue");
+
+                if (FOBValue) {
+                    FOBValue.textContent =
+                        `KSH ${result.FOB.toLocaleString()}`;
+                }
+
+                const FRTValue =
+                    document.getElementById("FRTValue");
+
+                if (FRTValue) {
+                    FRTValue.textContent =
+                        `KSH ${result.FRT.toLocaleString()}`;
+                }
+
+                const INSValue =
+                    document.getElementById("INSValue");
+
+                if (INSValue) {
+                    INSValue.textContent =
+                        `KSH ${result.INS.toLocaleString()}`;
+                }
+
+                const FOBUSDElement =
+                    document.getElementById("FOBUSD");
+
+                if (FOBUSDElement) {
+                    FOBUSDElement.textContent =
+                        `USD ${FOBUSD.toFixed(2)}`;
+                }
+
+                const FRTUSDElement =
+                    document.getElementById("FRTUSD");
+
+                if (FRTUSDElement) {
+                    FRTUSDElement.textContent =
+                        `USD ${FRTUSD.toFixed(2)}`;
+                }
+
+                const INSUSDElement =
+                    document.getElementById("INSUSD");
+
+                if (INSUSDElement) {
+                    INSUSDElement.textContent =
+                        `USD ${INSUSD.toFixed(2)}`;
+                }
+
+                const exchangeRateElement =
+                    document.getElementById("exchangeRate");
+
+                if (exchangeRateElement) {
+                    exchangeRateElement.textContent =
+                        `1 USD = KSH ${exchangeRate.toFixed(3)}`;
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Unable to get the current exchange rate. Please try again."
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// MODULE 2: REVERSE CRSP
+// ============================================================
+
+// CRSP calculation
+
+const currentYear =
+    new Date().getFullYear();
+
 const directImportDepreciation = [
+
     { maxMonths: 6, depreciation: 0.05 },
     { maxMonths: 12, depreciation: 0.10 },
     { maxMonths: 24, depreciation: 0.15 },
@@ -33,45 +149,97 @@ const directImportDepreciation = [
     { maxMonths: 72, depreciation: 0.50 },
     { maxMonths: 84, depreciation: 0.60 },
     { maxMonths: 96, depreciation: 0.70 }
+
 ];
 
-function calculateCRSP(custom, depreciation, exciseRate, extraDepreciation = 0) {
+function getDirectImportDepreciation(ageInMonths) {
 
-    return custom / (
-        ((1 - depreciation) / (1.25 * 1.16 * exciseRate))
-        * (1 - extraDepreciation)
-        * 1.25
+    for (
+        const rule
+        of directImportDepreciation
+    ) {
+
+        if (ageInMonths <= rule.maxMonths) {
+            return rule.depreciation;
+        }
+
+    }
+
+    return null;
+}
+
+// CRSP calculation
+
+function calculateCRSP(
+    customsValue,
+    depreciation,
+    exciseRate,
+    extraDepreciation = 0
+) {
+
+    return customsValue / (
+        (
+            (1 - depreciation)
+            /
+            (1.25 * 1.16 * exciseRate)
+        )
+        *
+        (1 - extraDepreciation)
+        *
+        1.25
     );
 
 }
 
-function method1(custom, depreciation, extraDepreciation = 0) {
+// CRSP calculation
+
+function method1(
+    customsValue,
+    depreciation,
+    extraDepreciation = 0
+) {
+
     return calculateCRSP(
-        custom,
+        customsValue,
         depreciation,
         1.20,
         extraDepreciation
     );
+
 }
 
+// CRSP calculation
 
-function method2(custom, depreciation, extraDepreciation = 0) {
+function method2(
+    customsValue,
+    depreciation,
+    extraDepreciation = 0
+) {
+
     return calculateCRSP(
-        custom,
+        customsValue,
         depreciation,
         1.25,
         extraDepreciation
     );
+
 }
 
+// CRSP calculation
 
-function method3(custom, depreciation, extraDepreciation = 0) {
+function method3(
+    customsValue,
+    depreciation,
+    extraDepreciation = 0
+) {
+
     return calculateCRSP(
-        custom,
+        customsValue,
         depreciation,
         1.30,
         extraDepreciation
     );
+
 }
 
 const vehicleMethods = {
@@ -93,74 +261,218 @@ const vehicleMethods = {
 
 };
 
-let method;
+function getVehicleMethod(cc, fuelType) {
 
-if (cc <= 1500) {
-    method = vehicleMethods.smallEngine;
-} else if (cc > 1500 && cc <= 3000 && fuelType === "petrol" || cc > 1500 && cc <= 2500 && fuelType === "diesel") {
-    method = vehicleMethods.largeEngine;
-} else {
-    method = vehicleMethods.highCapacity;
+    if (cc <= 1500) {
+
+        return vehicleMethods.smallEngine;
+
+    }
+
+    if (
+        (
+            cc > 1500 &&
+            cc <= 3000 &&
+            fuelType === "petrol"
+        )
+        ||
+        (
+            cc > 1500 &&
+            cc <= 2500 &&
+            fuelType === "diesel"
+        )
+    ) {
+
+        return vehicleMethods.largeEngine;
+
+    }
+
+    return vehicleMethods.highCapacity;
+
 }
 
-// Calculate Customs Value
-document.getElementById("calculateCv").addEventListener("click", async function () {
+const reverseCRSPButton =
+    document.getElementById("reverseCRSP");
 
-    const custom = Number(
-        document.getElementById("customValue").value
+if (reverseCRSPButton) {
+
+    reverseCRSPButton.addEventListener(
+        "click",
+        function () {
+
+            const customsValue =
+                Number(
+                    document
+                        .getElementById("reverseCustomValue")
+                        .value
+                );
+
+            const year =
+                Number(
+                    document
+                        .getElementById("year")
+                        .value
+                );
+
+            const cc =
+                Number(
+                    document
+                        .getElementById("cc")
+                        .value
+                );
+
+            const fuelType =
+                document
+                    .getElementById("fuelType")
+                    .value;
+
+            if (
+                !customsValue ||
+                customsValue <= 0
+            ) {
+
+                alert(
+                    "Please enter a valid customs value."
+                );
+
+                return;
+
+            }
+
+            if (
+                !year ||
+                year > currentYear
+            ) {
+
+                alert(
+                    "Please enter a valid vehicle year."
+                );
+
+                return;
+
+            }
+
+            if (!cc || cc <= 0) {
+
+                alert(
+                    "Please enter a valid engine capacity."
+                );
+
+                return;
+
+            }
+
+            const ageInYears =
+                currentYear - year + 1;
+
+            const ageInMonths =
+                ageInYears * 12;
+
+            const depreciation =
+                getDirectImportDepreciation(
+                    ageInMonths
+                );
+
+            if (depreciation === null) {
+
+                alert(
+                    "Vehicle is outside the supported direct import depreciation range."
+                );
+
+                return;
+
+            }
+
+            const method =
+                getVehicleMethod(
+                    cc,
+                    fuelType
+                );
+
+            const calculatedCRSP =
+                method.calculate(
+                    customsValue,
+                    depreciation
+                );
+
+            const newCRSP =
+                document.getElementById("newCRSP");
+
+            if (newCRSP) {
+
+                newCRSP.textContent =
+                    `KSH ${calculatedCRSP.toLocaleString(
+                        undefined,
+                        {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }
+                    )}`;
+
+            }
+
+        }
     );
 
-    if (!custom || custom <= 0) {
-        alert("Please enter a valid customs value.");
-        return;
-    }
-
-    try {
-
-        // Calculate KSH values
-        const result = customValue(custom);
-
-        // Get current exchange rate
-        const exchangeRate = await getExchangeRate();
-
-        // Convert KSH → USD
-        const FOBUSD = result.FOB / exchangeRate;
-        const FRTUSD = result.FRT / exchangeRate;
-        const INSUSD = result.INS / exchangeRate;
+}
 
 
-        // Display KSH
-        document.getElementById("FOBValue").textContent =
-            `KSH ${result.FOB.toLocaleString()}`;
+// ============================================================
+// MODULE 3: MOTOR VALUATION
+// ============================================================
 
-        document.getElementById("FRTValue").textContent =
-            `KSH ${result.FRT.toLocaleString()}`;
+const valuateButton =
+    document.getElementById("valuate");
 
-        document.getElementById("INSValue").textContent =
-            `KSH ${result.INS.toLocaleString()}`;
+if (valuateButton) {
 
+    valuateButton.addEventListener(
+        "click",
+        function () {
 
-        // Display USD
-        document.getElementById("FOBUSD").textContent =
-            `USD ${FOBUSD.toFixed(2)}`;
+            const crspInput =
+                document.getElementById("crsp");
 
-        document.getElementById("FRTUSD").textContent =
-            `USD ${FRTUSD.toFixed(2)}`;
+            if (!crspInput) {
+                return;
+            }
 
-        document.getElementById("INSUSD").textContent =
-            `USD ${INSUSD.toFixed(2)}`;
+            const crsp =
+                Number(crspInput.value);
 
+            if (!crsp || crsp <= 0) {
 
-        // Display exchange rate
-        document.getElementById("exchangeRate").textContent =
-            `1 USD = KSH ${exchangeRate.toFixed(3)}`;
+                alert(
+                    "Please enter a valid CRSP."
+                );
 
-    } catch (error) {
+                return;
 
-        console.error(error);
+            }
 
-        alert("Unable to get the current exchange rate. Please try again.");
+            const newCustomValue =
+                crsp;
 
-    }
+            const result =
+                document.getElementById(
+                    "newCustomValue"
+                );
 
-});
+            if (result) {
+
+                result.textContent =
+                    `KSH ${newCustomValue.toLocaleString(
+                        undefined,
+                        {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }
+                    )}`;
+
+            }
+
+        }
+    );
+
+}
+
