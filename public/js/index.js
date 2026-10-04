@@ -176,19 +176,13 @@ function calculateCRSP(
     exciseRate,
     extraDepreciation = 0
 ) {
-
-    return customsValue / (
+    return (
+        customsValue /
         (
-            (1 - depreciation)
-            /
-            (1.25 * 1.16 * exciseRate)
+            ((1 - depreciation) / (1.25 * exciseRate * 1.16)) *
+            (1 - extraDepreciation)
         )
-        *
-        (1 - extraDepreciation)
-        *
-        1.25
-    );
-
+    ) * 1.25;
 }
 
 // CRSP calculation
@@ -219,7 +213,7 @@ function method2(
     return calculateCRSP(
         customsValue,
         depreciation,
-        1.25,
+        1.20,
         extraDepreciation
     );
 
@@ -250,7 +244,7 @@ const vehicleMethods = {
     },
 
     largeEngine: {
-        excise: 1.25,
+        excise: 1.20,
         calculate: method2
     },
 
@@ -363,7 +357,7 @@ if (reverseCRSPButton) {
             }
 
             const ageInYears =
-                currentYear - year + 1;
+                currentYear - year;
 
             const ageInMonths =
                 ageInYears * 12;
@@ -417,62 +411,135 @@ if (reverseCRSPButton) {
 }
 
 
-// ============================================================
-// MODULE 3: MOTOR VALUATION
-// ============================================================
+// MODULE 3: NEW CUSTOM VALUE
 
-const valuateButton =
-    document.getElementById("valuate");
+const crspDirectImportDepreciation = [
+    { maxMonths: 24, depreciation: 0.20 },
+    { maxMonths: 36, depreciation: 0.30 },
+    { maxMonths: 48, depreciation: 0.40 },
+    { maxMonths: 60, depreciation: 0.50 },
+    { maxMonths: 72, depreciation: 0.55 },
+    { maxMonths: 84, depreciation: 0.60 },
+    { maxMonths: 96, depreciation: 0.65 }
+];
 
-if (valuateButton) {
-
-    valuateButton.addEventListener(
-        "click",
-        function () {
-
-            const crspInput =
-                document.getElementById("crsp");
-
-            if (!crspInput) {
-                return;
-            }
-
-            const crsp =
-                Number(crspInput.value);
-
-            if (!crsp || crsp <= 0) {
-
-                alert(
-                    "Please enter a valid CRSP."
-                );
-
-                return;
-
-            }
-
-            const newCustomValue =
-                crsp;
-
-            const result =
-                document.getElementById(
-                    "newCustomValue"
-                );
-
-            if (result) {
-
-                result.textContent =
-                    `KSH ${newCustomValue.toLocaleString(
-                        undefined,
-                        {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        }
-                    )}`;
-
-            }
-
-        }
+function calculateCustomsValue(
+    crsp,
+    depreciation,
+    exciseRate,
+    extraDepreciation = 0
+) {
+    return (
+        (crsp / 1.25) *
+        ((1 - depreciation) / (1.25 * exciseRate * 1.16)) *
+        (1 - extraDepreciation)
     );
-
 }
 
+function getDirectImportDepreciation(ageInMonths) {
+    const rate = crspDirectImportDepreciation.find(
+        item => ageInMonths <= item.maxMonths
+    );
+
+    return rate
+        ? rate.depreciation
+        : crspDirectImportDepreciation[
+            crspDirectImportDepreciation.length - 1
+        ].depreciation;
+}
+
+function getVehicleValuation(cc, fuelType) {
+    if (cc <= 1500) {
+        return { exciseRate: 1.20 };
+    }
+
+    if (
+        (fuelType === "petrol" && cc > 3000) ||
+        (fuelType === "diesel" && cc > 2500)
+    ) {
+        return { exciseRate: 1.35 };
+    }
+
+    return { exciseRate: 1.25 };
+}
+
+const valuateButton = document.getElementById("valuate");
+
+if (valuateButton) {
+    valuateButton.addEventListener("click", function () {
+        const crspInput = document.getElementById("reverseCRSP");
+        const yearInput = document.getElementById("vehicleYear");
+        const ccInput = document.getElementById("vehicleCC");
+        const fuelInput = document.getElementById("vehicleFuelType");
+        const result = document.getElementById("newCustomValueResult");
+
+        if (
+            !crspInput ||
+            !yearInput ||
+            !ccInput ||
+            !fuelInput ||
+            !result
+        ) {
+            console.error("Module 3 is missing an HTML element.");
+            return;
+        }
+
+        const crsp = Number(crspInput.value);
+        const year = Number(yearInput.value);
+        const cc = Number(ccInput.value);
+        const fuelType = fuelInput.value;
+        const currentYear = new Date().getFullYear();
+
+        if (!Number.isFinite(crsp) || crsp <= 0) {
+            alert("Please enter a valid CRSP.");
+            return;
+        }
+
+        if (
+            !Number.isInteger(year) ||
+            year < 1900 ||
+            year > currentYear
+        ) {
+            alert("Please enter a valid vehicle year.");
+            return;
+        }
+
+        if (!Number.isFinite(cc) || cc <= 0) {
+            alert("Please enter a valid engine capacity.");
+            return;
+        }
+
+        if (!fuelType) {
+            alert("Please select a fuel type.");
+            return;
+        }
+
+        const ageInMonths = (currentYear - year + 1) * 12;
+
+        const depreciation = getDirectImportDepreciation(
+            ageInMonths
+        );
+
+        const { exciseRate } = getVehicleValuation(
+            cc,
+            fuelType
+        );
+
+        const extraDepreciation = 0;
+
+        const newCustomValue = calculateCustomsValue(
+            crsp,
+            depreciation,
+            exciseRate,
+            extraDepreciation
+        );
+
+        result.textContent = `KSH ${newCustomValue.toLocaleString(
+            "en-KE",
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }
+        )}`;
+    });
+}
