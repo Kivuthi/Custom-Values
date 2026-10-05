@@ -431,9 +431,12 @@ function calculateCustomsValue(
 ) {
     return (
         (crsp / 1.25) *
-        ((1 - depreciation) / (1.25 * exciseRate * 1.16)) *
+        (1 - depreciation) /
+        1.25 /
+        exciseRate /
+        1.16) *
         (1 - extraDepreciation)
-    );
+    ;
 }
 
 function getDirectImportDepreciation(ageInMonths) {
@@ -457,17 +460,17 @@ function getVehicleValuation(cc, fuelType) {
         (fuelType === "petrol" && cc > 3000) ||
         (fuelType === "diesel" && cc > 2500)
     ) {
-        return { exciseRate: 1.35 };
+        return { exciseRate: 1.30 };
     }
 
-    return { exciseRate: 1.25 };
+    return { exciseRate: 1.20 };
 }
 
 const valuateButton = document.getElementById("valuate");
 
 if (valuateButton) {
     valuateButton.addEventListener("click", function () {
-        const crspInput = document.getElementById("reverseCRSP");
+        const crspInput = document.getElementById("CRSP");
         const yearInput = document.getElementById("vehicleYear");
         const ccInput = document.getElementById("vehicleCC");
         const fuelInput = document.getElementById("vehicleFuelType");
@@ -490,7 +493,7 @@ if (valuateButton) {
         const fuelType = fuelInput.value;
         const currentYear = new Date().getFullYear();
 
-        if (!Number.isFinite(crsp) || crsp <= 0) {
+        if (!crsp || crsp <= 0) {
             alert("Please enter a valid CRSP.");
             return;
         }
