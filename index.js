@@ -357,7 +357,7 @@ if (reverseCRSPButton) {
             }
 
             const ageInYears =
-                currentYear - year;
+                (currentYear - year) + 1;
 
             const ageInMonths =
                 ageInYears * 12;
